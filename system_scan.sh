@@ -29,7 +29,10 @@ function get_appuser
 	do
 		appuser_out=$appuser_out$index", "
 	done
-	appuser_info=${appuser_out:: -2}
+	user_lenght=$(echo ${#appuser_out})
+	# redhat need enhance
+	user_end=$(echo "$user_lenght-2"|bc)
+	appuser_info=${appuser_out:0: $user_end}
 	echo "appuser: $appuser_info"
 }
 
