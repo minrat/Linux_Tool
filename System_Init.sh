@@ -44,12 +44,13 @@ function add_user
 vg_name=$(pvs| sed -n '2p'| awk {'print $2'})
 
 # Get The Free Disks
-disk_name_pool=$(lsblk -ml | grep -v 'floppy\|fd\|sr' | grep -v 'cdrom\|NAME'| grep -v 'lv\|rhel\|centos' | grep -v 'dm'| awk {'print $1'}| cut -c 1-3| uniq)
+#disk_name_pool=$(lsblk -ml | grep -v 'floppy\|fd\|sr' | grep -v 'cdrom\|NAME'| grep -v 'lv\|rhel\|centos' | grep -v 'dm'| awk {'print $1'}| cut -c 1-3| uniq)
 
 # Disk Active Workflow
 function disk_active
 {
       disk_name=$1
+
       # OS Type Check
       if [[ -f /etc/redhat-release ]];then
               #echo "RHEL Situation"
@@ -102,16 +103,41 @@ function disk_active
 }
 function vg_expand
 {
-      for disk_index in $disk_name_pool
-      do
-        parted /dev/$disk_index print | grep 'File system' &> /dev/null
-        if [[ $? -ne 0 ]];then
-                # unused disk
-                echo "$disk_index is OK For Add To Existing VG..."
-                # Add Disk
-                disk_active $disk_index
-        fi
+      time_t=0
+      disk_flag=0
 
+      while [[ $time_t -lt 300 && $disk_flag -eq 0 ]]
+      do
+	# Get The Free Disks
+        disk_name_pool=$(lsblk -ml | grep -v 'floppy\|fd\|sr' | grep -v 'cdrom\|NAME'| grep -v 'lv\|rhel\|centos' | grep -v 'dm'| awk {'print $1'}| cut -c 1-3| uniq)
+
+      	if [[ -f /etc/SuSE-release  || -f /etc/redhat-release ]];then
+      	                  echo "- - -" > /sys/class/scsi_host/host0/scan
+      	                  echo "- - -" > /sys/class/scsi_host/host1/scan
+      	                  echo "- - -" > /sys/class/scsi_host/host2/scan
+      	fi
+
+      	if [[ ${#disk_name_pool} -gt 3  ]];then
+	  disk_flag=1
+
+      	  echo "Disk Ready!"
+      		for disk_index in $disk_name_pool
+      		do
+      		  parted /dev/$disk_index print | grep 'File system' &> /dev/null
+      		  if [[ $? -ne 0 ]];then
+      		          # unused disk
+      		          echo "$disk_index is OK For Add To Existing VG..."
+      		          # Add Disk
+      		          disk_active $disk_index
+      		  fi
+
+      		done
+      	else
+      	  echo "NO Disk Avaliable!-$time_t"
+      	fi
+
+	sleep 1
+	let time_t=$time_t+1
       done
 
 }
